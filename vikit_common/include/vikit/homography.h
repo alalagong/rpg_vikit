@@ -26,6 +26,7 @@ namespace vk {
 using namespace Eigen;
 using namespace std;
 
+// H矩阵分解得到的参数
 struct HomographyDecomposition
 {
   Vector3d t;

@@ -11,10 +11,18 @@ namespace vk {
 
 using namespace Eigen;
 
+/********************************
+ * @ function: 三角化方法1
+ * 
+ * @ param: 
+ * 
+ * @ note:
+ *******************************/
 Vector3d
 triangulateFeatureNonLin(const Matrix3d& R,  const Vector3d& t,
                          const Vector3d& feature1, const Vector3d& feature2 )
 {
+  // 使用公式计算，最后求最小二乘
   Vector3d f2 = R * feature2;
   Vector2d b;
   b[0] = t.dot(feature1);
@@ -27,9 +35,11 @@ triangulateFeatureNonLin(const Matrix3d& R,  const Vector3d& t,
   Vector2d lambda = A.inverse() * b;
   Vector3d xm = lambda[0] * feature1;
   Vector3d xn = t + lambda[1] * f2;
+  // 两个点求平均
   return ( xm + xn )/2;
 }
 
+//这是个啥？？？
 bool
 depthFromTriangulationExact(
     const Matrix3d& R_r_c,
@@ -58,9 +68,12 @@ reprojError(const Vector3d& f1,
             const Vector3d& f2,
             double error_multiplier2)
 {
+  //归一化平面的前两个坐标
   Vector2d e = project2d(f1) - project2d(f2);
+  // 乘以f得到像素坐标差
   return error_multiplier2 * e.norm();
 }
+
 
 double
 computeInliers(const vector<Vector3d>& features1, // c1
@@ -80,9 +93,12 @@ computeInliers(const vector<Vector3d>& features1, // c1
   //triangulate all features and compute reprojection errors and inliers
   for(size_t j=0; j<features1.size(); ++j)
   {
+    //[***step 1***] 三角化并放入xyz_vec
     xyz_vec.push_back(triangulateFeatureNonLin(R, t, features1[j], features2[j] ));
+    //[***step 2***] 把三角化后的做重投影，计算误差，back是最近的那个。
     double e1 = reprojError(features1[j], xyz_vec.back(), error_multiplier2);
     double e2 = reprojError(features2[j], R.transpose()*(xyz_vec.back()-t), error_multiplier2);
+    //[***step 3***]判断误差大小，决定内点还是外点
     if(e1 > reproj_thresh || e2 > reproj_thresh)
       outliers.push_back(j);
     else
@@ -188,14 +204,21 @@ sampsonusError(const Vector2d &v2Dash, const Matrix3d& Essential, const Vector2d
   Vector3d v3Dash = unproject2d(v2Dash);
   Vector3d v3 = unproject2d(v2);
 
+  //应该等于0，由于误差不等于0,做点到直线距离的分子
   double dError = v3Dash.transpose() * Essential * v3;
 
+  //求得极线
   Vector3d fv3 = Essential * v3;
   Vector3d fTv3Dash = Essential.transpose() * v3Dash;
 
+  //极线的前两个量，做点到直线距离公式的分母
   Vector2d fv3Slice = fv3.head<2>();
   Vector2d fTv3DashSlice = fTv3Dash.head<2>();
 
+  //实际上计算的是点到直线距离公式
+  //直线（a,b,c） ax+by+c=0
+  //点(x,y)
+  //距离 ax+by+c/sqrt(a*a+b*b)
   return (dError * dError / (fv3Slice.dot(fv3Slice) + fTv3DashSlice.dot(fTv3DashSlice)));
 }
 

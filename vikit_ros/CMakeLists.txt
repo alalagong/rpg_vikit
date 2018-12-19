@@ -21,6 +21,8 @@ FIND_PACKAGE(OpenCV REQUIRED)
 FIND_PACKAGE(Eigen REQUIRED)
 FIND_PACKAGE(Sophus REQUIRED)
 
+#SET(${Eigen_INCLUDE_DIRS} "/home/gong/Library/Eigen3.2.1/Installdir/include/")
+
 # Include dirs
 INCLUDE_DIRECTORIES(
   include
@@ -32,7 +34,7 @@ INCLUDE_DIRECTORIES(
 
 # Describe catkin Project
 catkin_package(
-    DEPENDS Eigen OpenCV Sophus vikit_common
+    DEPENDS  OpenCV Sophus vikit_common Eigen
     CATKIN_DEPENDS roscpp visualization_msgs tf 
     INCLUDE_DIRS include
     LIBRARIES ${PROJECT_NAME}

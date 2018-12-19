@@ -12,6 +12,14 @@
 
 #include <stdexcept>
 
+/********************************
+ * @ function: 优化, 可选LM或者GN
+ * 
+ * @ param:  ModelType = T 待优化的量
+ *           D 优化变量的维数
+ * 
+ * @ note:
+ *******************************/
 template <int D, typename T>
 void vk::NLLSSolver<D, T>::optimize(ModelType& model)
 {
@@ -20,7 +28,13 @@ void vk::NLLSSolver<D, T>::optimize(ModelType& model)
   else if(method_ == LevenbergMarquardt)
     optimizeLevenbergMarquardt(model);
 }
-
+/********************************
+ * @ function: GN求解反向组合算法
+ * 
+ * @ param:  待优化变量
+ * 
+ * @ note: GN迭代过程，并update，并且判断停止条件
+ *******************************/
 template <int D, typename T>
 void vk::NLLSSolver<D, T>::optimizeGaussNewton(ModelType& model)
 {
@@ -123,6 +137,7 @@ void vk::NLLSSolver<D, T>::optimizeLevenbergMarquardt(ModelType& model)
   {
     double H_max_diag = 0;
     double tau = 1e-4;
+    //6*6
     for(size_t j=0; j<D; ++j)
       H_max_diag = max(H_max_diag, fabs(H_(j,j)));
     mu_ = tau*H_max_diag;
@@ -147,7 +162,7 @@ void vk::NLLSSolver<D, T>::optimizeLevenbergMarquardt(ModelType& model)
 
       // compute initial error
       n_meas_ = 0;
-      computeResiduals(model, true, false);
+      computeResiduals(model, true, false); //这样重复计算了好多次啊。。。
 
       // add damping term:
       H_ += (H_.diagonal()*mu_).asDiagonal();
@@ -164,7 +179,7 @@ void vk::NLLSSolver<D, T>::optimizeLevenbergMarquardt(ModelType& model)
 
         // compute error with new model and compare to old error
         n_meas_ = 0;
-        new_chi2 = computeResiduals(new_model, false, false);
+        new_chi2 = computeResiduals(new_model, false, false); //只是为了计算chi2
         rho_ = chi2_-new_chi2;
       }
       else
@@ -178,6 +193,7 @@ void vk::NLLSSolver<D, T>::optimizeLevenbergMarquardt(ModelType& model)
 
       if(rho_>0)
       {
+        //求解成功则减小mu_
         // update decrased the error -> success
         model = new_model;
         chi2_ = new_chi2;
@@ -198,11 +214,13 @@ void vk::NLLSSolver<D, T>::optimizeLevenbergMarquardt(ModelType& model)
       }
       else
       {
+        //求解失败则扩大mu_, 尝试使H_变得非奇异
         // update increased the error -> fail
         mu_ *= nu_;
         nu_ *= 2.;
         ++n_trials_;
-        if (n_trials_ >= n_trials_max_)
+        //大于最大尝试次数则退出
+        if (n_trials_ >= n_trials_max_) 
           stop_ = true;
 
         if(verbose_)
@@ -220,7 +238,7 @@ void vk::NLLSSolver<D, T>::optimizeLevenbergMarquardt(ModelType& model)
 
       finishTrial();
 
-    } while(!(rho_>0 || stop_));
+    } while(!(rho_>0 || stop_)); //为了trials设置的循环
     if (stop_)
       break;
 
@@ -317,7 +335,7 @@ inline const double& vk::NLLSSolver<D, T>::getChi2() const
 template <int D, typename T>
 inline const vk::Matrix<double, D, D>& vk::NLLSSolver<D, T>::getInformationMatrix() const
 {
-  return H_;
+  return H_;  //原来你叫informationMatrix
 }
 
 #endif /* LM_SOLVER_IMPL_HPP_ */

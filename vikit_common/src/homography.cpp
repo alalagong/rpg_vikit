@@ -27,13 +27,29 @@ Homography(const vector<Vector2d, aligned_allocator<Vector2d> >& _fts1,
 {
 }
 
+/********************************
+ * @ function: 从平面参数计算H矩阵
+ * 
+ * @ param: 平面法向量 n_c1
+ *          平面上一点 xyz_c1
+ * 
+ * @ note:  
+ *******************************/
 void Homography::
 calcFromPlaneParams(const Vector3d& n_c1, const Vector3d& xyz_c1)
-{
+{  
   double d = n_c1.dot(xyz_c1); // normal distance from plane to KF
+  //公式：R+tn'/d
   H_c2_from_c1 = T_c2_from_c1.rotation_matrix() + (T_c2_from_c1.translation()*n_c1.transpose())/d;
 }
 
+/********************************
+ * @ function: 从匹配点计算H矩阵
+ * 
+ * @ param: 
+ * 
+ * @ note: 使用的是opencv的内部函数
+ *******************************/
 void Homography::
 calcFromMatches()
 {
@@ -43,9 +59,11 @@ calcFromMatches()
     src_pts[i] = cv::Point2f(fts_c1[i][0], fts_c1[i][1]);
     dst_pts[i] = cv::Point2f(fts_c2[i][0], fts_c2[i][1]);
   }
-
+  
   // TODO: replace this function to remove dependency from opencv!
+  //第四个参数，为ransac的容忍距离（像素）
   cv::Mat cvH = cv::findHomography(src_pts, dst_pts, CV_RANSAC, 2./error_multiplier2);
+  // cv::mat 2 eigen::matrix
   H_c2_from_c1(0,0) = cvH.at<double>(0,0);
   H_c2_from_c1(0,1) = cvH.at<double>(0,1);
   H_c2_from_c1(0,2) = cvH.at<double>(0,2);
@@ -57,6 +75,13 @@ calcFromMatches()
   H_c2_from_c1(2,2) = cvH.at<double>(2,2);
 }
 
+/********************************
+ * @ function: 统计内点数量
+ * 
+ * @ param: 
+ * 
+ * @ note:
+ *******************************/
 size_t Homography::
 computeMatchesInliers()
 {
@@ -64,20 +89,27 @@ computeMatchesInliers()
   size_t n_inliers = 0;
   for(size_t i=0; i<fts_c1.size(); i++)
   {
-    Vector2d projected = project2d(H_c2_from_c1 * unproject2d(fts_c1[i]));
-    Vector2d e = fts_c2[i] - projected;
+    Vector2d projected = project2d(H_c2_from_c1 * unproject2d(fts_c1[i])); //归一化平面上点根据H矩阵映射
+    Vector2d e = fts_c2[i] - projected; //计算误差
     double e_px = error_multiplier2 * e.norm();
-    inliers[i] = (e_px < thresh);
+    inliers[i] = (e_px < thresh); //是否小于阈值
     n_inliers += inliers[i];
   }
   return n_inliers;
 
 }
 
+/********************************
+ * @ function: 计算出H矩阵，并分解得到R,t
+ * 
+ * @ param: 
+ * 
+ * @ note:
+ *******************************/
 bool Homography::
 computeSE3fromMatches()
 {
-  calcFromMatches();
+  calcFromMatches(); //得到H矩阵
   bool res = decompose();
   if(!res)
     return false;
@@ -87,12 +119,21 @@ computeSE3fromMatches()
   return true;
 }
 
+/********************************
+ * @ function: 对H进行分解得到R,t,n,d
+ * 
+ * @ param:  
+ * 
+ * @ note: 只在 d1!=d2!=d3 情况下
+ *******************************/
 bool Homography::
 decompose()
 {
-  decompositions.clear();
+  decompositions.clear();//分解得到的参数
+  //Eigen库进行SVD分解
   JacobiSVD<MatrixXd> svd(H_c2_from_c1, ComputeThinU | ComputeThinV);
 
+  //奇异值
   Vector3d singular_values = svd.singularValues();
 
   double d1 = fabs(singular_values[0]); // The paper suggests the square of these (e.g. the evalues of AAT)
@@ -139,7 +180,7 @@ decompose()
   HomographyDecomposition decomp;
 
   // Case 1, d' > 0:
-  decomp.d = s * dPrime_PM;
+  decomp.d = s * dPrime_PM; //d'=sd s*s=1 : d=sd'
   for(size_t signs=0; signs<4; signs++)
   {
     // Eq 13
@@ -159,7 +200,7 @@ decompose()
     np[0] = x1_PM * e1[signs];
     np[1] = x2;
     np[2] = x3_PM * e3[signs];
-    decomp.n = V * np;
+    decomp.n = V * np; //n'=V^Tn n=Vn'
 
     decompositions.push_back(decomp);
   }
@@ -200,11 +241,28 @@ decompose()
   return true;
 }
 
+/********************************
+ * @ function: 重载 < 用于sort
+ * 
+ * @ param: 
+ * 
+ * @ note:
+ *******************************/
 bool operator<(const HomographyDecomposition lhs, const HomographyDecomposition rhs)
 {
   return lhs.score < rhs.score;
 }
 
+/********************************
+ * @ function: 从H分解出的8个解中挑出最好的
+ * 
+ * @ param: 
+ * 
+ * @ note: 一共3个筛选条件，分别去掉一半点
+ *          1）投影点深度为正
+ *          2）平面方程大于零
+ *          3）点到极线距离较小（过于接近下）
+ *******************************/
 void Homography::
 findBestDecomposition()
 {
@@ -218,13 +276,15 @@ findBestDecomposition()
       if(!inliers[m])
         continue;
       const Vector2d& v2 = fts_c1[m];
+      //计算最后一行，也就是x2的深度，大于零的计数
       double dVisibilityTest = (H_c2_from_c1(2,0) * v2[0] + H_c2_from_c1(2,1) * v2[1] + H_c2_from_c1(2,2)) / decom.d;
       if(dVisibilityTest > 0.0)
         nPositive++;
     }
     decom.score = -nPositive;
   }
-
+  //根据sorce来排序（重载了<号）
+  //舍去了4个点
   sort(decompositions.begin(), decompositions.end());
   decompositions.resize(4);
 
@@ -237,30 +297,35 @@ findBestDecomposition()
       if(!inliers[m])
         continue;
       Vector3d v3 = unproject2d(fts_c1[m]);
+      //计算平面方程，n^T*X/d = 1，大于零计数
       double dVisibilityTest = v3.dot(decom.n) / decom.d;
       if(dVisibilityTest > 0.0)
         nPositive++;
     };
-    decom.score = -nPositive;
+    decom.score = -nPositive; //排序用
   }
 
-  sort(decompositions.begin(), decompositions.end());
+  sort(decompositions.begin(), decompositions.end()); //默认是从小到大
   decompositions.resize(2);
 
   // According to Faugeras and Lustman, ambiguity exists if the two scores are equal
   // but in practive, better to look at the ratio!
   double dRatio = (double) decompositions[1].score / (double) decompositions[0].score;
-
-  if(dRatio < 0.9) // no ambiguity!
+  
+  //最后两个根据评分的大小舍去
+  if(dRatio < 0.9) // no ambiguity! 差别较大
     decompositions.erase(decompositions.begin() + 1);
   else  // two-way ambiguity. Resolve by sampsonus score of all points.
   {
-    double dErrorSquaredLimit  = thresh * thresh * 4;
+    //两个解相近
+    double dErrorSquaredLimit  = thresh * thresh * 4;//距离的2倍的平方
     double adSampsonusScores[2];
     for(size_t i=0; i<2; i++)
     {
       Sophus::SE3 T = decompositions[i].T;
+      // 计算本质矩阵
       Matrix3d Essential = T.rotation_matrix() * sqew(T.translation());
+      // 计算点到极线的距离作为误差
       double dSumError = 0;
       for(size_t m=0; m < fts_c1.size(); m++ )
       {
@@ -271,7 +336,7 @@ findBestDecomposition()
       }
       adSampsonusScores[i] = dSumError;
     }
-
+    // 根据误差大小取舍
     if(adSampsonusScores[0] <= adSampsonusScores[1])
       decompositions.erase(decompositions.begin() + 1);
     else

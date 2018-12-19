@@ -25,6 +25,8 @@ FIND_PACKAGE(OpenCV REQUIRED)
 FIND_PACKAGE(Eigen REQUIRED)
 FIND_PACKAGE(Sophus REQUIRED)
 
+#SET(${Eigen_INCLUDE_DIRS} "/home/gong/Library/Eigen3.2.1/Installdir/include/")
+
 # Include dirs
 INCLUDE_DIRECTORIES(
   include
@@ -37,7 +39,7 @@ IF(USE_ROS)
   FIND_PACKAGE(catkin REQUIRED COMPONENTS roscpp cmake_modules)
   LIST(APPEND INCLUDE_DIRECTORIES ${catkin_INCLUDE_DIRS})
   catkin_package(
-    DEPENDS Eigen OpenCV Sophus
+    DEPENDS  OpenCV Sophus Eigen
     CATKIN_DEPENDS roscpp
     INCLUDE_DIRS include
     LIBRARIES ${PROJECT_NAME}
