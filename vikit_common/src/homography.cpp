@@ -276,7 +276,7 @@ findBestDecomposition()
       if(!inliers[m])
         continue;
       const Vector2d& v2 = fts_c1[m];
-      //计算最后一行，也就是x2的深度，大于零的计数
+      //计算最后一行，也就是x2=H*x1的深度(第三行)，大于零的计数
       double dVisibilityTest = (H_c2_from_c1(2,0) * v2[0] + H_c2_from_c1(2,1) * v2[1] + H_c2_from_c1(2,2)) / decom.d;
       if(dVisibilityTest > 0.0)
         nPositive++;

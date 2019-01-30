@@ -95,7 +95,7 @@ void PerformanceMonitor::log(const string& name, double data)
 {
   auto l = logs_.find(name);
   if(l == logs_.end()) {
-    printf("Logger = %s\n", name.c_str());
+    printf("Logger = %s\n",  name.c_str());
     throw std::runtime_error("Logger not registered");
   }
   l->second.data = data;

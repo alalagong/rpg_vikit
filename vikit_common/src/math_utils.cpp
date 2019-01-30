@@ -93,12 +93,12 @@ computeInliers(const vector<Vector3d>& features1, // c1
   //triangulate all features and compute reprojection errors and inliers
   for(size_t j=0; j<features1.size(); ++j)
   {
-    //[***step 1***] 三角化并放入xyz_vec
+    //[ ***step 1***] 三角化并放入xyz_vec
     xyz_vec.push_back(triangulateFeatureNonLin(R, t, features1[j], features2[j] ));
-    //[***step 2***] 把三角化后的做重投影，计算误差，back是最近的那个。
+    //[ ***step 2***] 把三角化后的做重投影，计算误差，back是最近的那个。
     double e1 = reprojError(features1[j], xyz_vec.back(), error_multiplier2);
     double e2 = reprojError(features2[j], R.transpose()*(xyz_vec.back()-t), error_multiplier2);
-    //[***step 3***]判断误差大小，决定内点还是外点
+    //[ ***step 3***]判断误差大小，决定内点还是外点
     if(e1 > reproj_thresh || e2 > reproj_thresh)
       outliers.push_back(j);
     else
