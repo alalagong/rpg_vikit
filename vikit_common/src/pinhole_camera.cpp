@@ -73,6 +73,7 @@ cam2world (const Vector2d& uv) const
 Vector2d PinholeCamera::
 world2cam(const Vector3d& xyz) const
 {
+  // 投影到归一化平面, 利用函数重载进行下一步
   return world2cam(project2d(xyz));
 }
 
@@ -80,6 +81,7 @@ Vector2d PinholeCamera::
 world2cam(const Vector2d& uv) const
 {
   Vector2d px;
+  // 没有畸变则投影到图像平面
   if(!distortion_)
   {
     px[0] = fx_*uv[0] + cx_;
