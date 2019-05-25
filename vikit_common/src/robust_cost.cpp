@@ -64,8 +64,8 @@ compute(std::vector<float>& errors) const
   return std::sqrt(1.0f / lambda);
 }
 
+//* 对于正态分布来说系数是1.4826来估计标准差, 参考https://en.wikipedia.org/wiki/Median_absolute_deviation
 const float MADScaleEstimator::NORMALIZER = 1.48f; // 1 / 0.6745
-
 float MADScaleEstimator::
 compute(std::vector<float>& errors) const
 {

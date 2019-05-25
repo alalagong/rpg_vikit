@@ -130,7 +130,7 @@ world2cam(const Vector3d& xyz_c) const
   worldCoordinates_bis[0] = xyz_c[1];
   worldCoordinates_bis[1] = xyz_c[0];
   worldCoordinates_bis[2] = -xyz_c[2];
-
+  
   double norm = sqrt( pow( worldCoordinates_bis[0], 2 ) + pow( worldCoordinates_bis[1], 2 ) );
   double theta = atan( worldCoordinates_bis[2]/norm );
 
@@ -146,7 +146,7 @@ world2cam(const Vector3d& xyz_c) const
     rho = ocamModel.invpol[0];
 
     t_i = 1;
-
+    // 多项式 
     for( int i = 1; i < ocamModel.length_invpol; i++ )
     {
       t_i *= theta;
@@ -155,8 +155,8 @@ world2cam(const Vector3d& xyz_c) const
 
     x = worldCoordinates_bis[0] * rho/norm;
     y = worldCoordinates_bis[1] * rho/norm;
-
-    // we exchange 0 and 1 in order to have pinhole model again
+  
+    //? we exchange 0 and 1 in order to have pinhole model again
     uv[1] = x * ocamModel.c + y * ocamModel.d + ocamModel.xc;
     uv[0] = x * ocamModel.e + y + ocamModel.yc;
   }

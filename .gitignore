@@ -1,1 +1,4 @@
 vikit_py/build
+.vscode/ipch/59c049412ef0738d/mmap_address.bin
+*.bin
+*.ipch

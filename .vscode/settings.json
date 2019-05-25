@@ -2,5 +2,9 @@
     "python.autoComplete.extraPaths": [
         "/home/gong/catkin_ws/devel/lib/python2.7/dist-packages",
         "/opt/ros/kinetic/lib/python2.7/dist-packages"
-    ]
+    ],
+    "files.associations": {
+        "chrono": "cpp",
+        "algorithm": "cpp"
+    }
 }
